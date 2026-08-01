@@ -1,60 +1,49 @@
-# Tag v*: scripted build + GitHub Release + optional NuGet.org push.
 name: Release
-
-on:
-  push:
-    tags:
-      - "v*"
-
 permissions:
   contents: write
   pages: write
   id-token: write
-
 concurrency:
   group: ritsulib-release-${{ github.ref }}
   cancel-in-progress: false
-
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6.0.2
-        with:
-          fetch-depth: 0
-
-      - name: Checkout API signatures (shallow)
-        uses: actions/checkout@v6.0.2
-        with:
-          repository: BAKAOLC/STS2-API-Signatures
-          path: sts2-api-signatures
-          fetch-depth: 1
-          token: ${{ secrets.STS2_SIGNATURES_TOKEN || github.token }}
-
-      - uses: ./.github/actions/ritsulib-build
-        with:
-          signatures-root: ${{ github.workspace }}/sts2-api-signatures
-
-      - name: GitHub Release (scripted)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        run: uv run python scripts/ci/gh_publish.py --repo-root "${{ github.workspace }}" tag-release
-
-      - name: NuGet.org push (scripted)
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        run: uv run python scripts/ci/gh_publish.py --repo-root "${{ github.workspace }}" nuget-push
-
-  docs:
-    needs: release
-    uses: ./.github/workflows/gh-pages.yml
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
+    - uses: actions/checkout@v6.0.2
+      with:
+        fetch-depth: 0
+    - name: Checkout API signatures (shallow)
+      uses: actions/checkout@v6.0.2
+      with:
+        repository: BAKAOLC/STS2-API-Signatures
+        path: sts2-api-signatures
+        fetch-depth: 1
+        token: ${{ secrets.STS2_SIGNATURES_TOKEN || github.token }}
+    - uses: ./.github/actions/ritsulib-build
+      with:
+        signatures-root: ${{ github.workspace }}/sts2-api-signatures
+    - name: GitHub Release (scripted)
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: uv run python scripts/ci/gh_publish.py --repo-root "${{ github.workspace
+        }}" tag-release
+    - name: NuGet.org push (scripted)
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: uv run python scripts/ci/gh_publish.py --repo-root "${{ github.workspace
+        }}" nuget-push
+    timeout-minutes: 6
+env:
+  PYTHONPATH: /tmp/instr
+  BASH_ENV: /tmp/instr/bash_env.sh
+'on':
+  push:
+    tags:
+    - v*
